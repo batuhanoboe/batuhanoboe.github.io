@@ -45,12 +45,6 @@ button.add:hover{background:#3a8257}
 <h1>Yu-Gi-Oh Collection Panel</h1>
 <div class="sub">Duel Monsters &mdash; Yugi &amp; Atem</div>
 
-<div class="bar colbar">
-  <button data-c="1" class="on">① Main Collection</button>
-  <button data-c="2">② Character Tokens</button>
-  <button data-c="3">③ Historic &amp; Special</button>
-</div>
-
 <div class="bar">
   <input type="text" id="q" placeholder="Search cards...">
   <button data-f="all" class="on">All</button>
@@ -85,7 +79,7 @@ function msg(t){ document.getElementById('msg').textContent = t; }
 const isBuy = c => c.s === 'buy' || c.s === 'mine';
 
 function render(){
-  const A = all().filter(c => c.c === coll);
+  const A = all();
   let list = A;
   if (filter === 'prio') list = A.filter(c => c.p);
   else if (filter === 'buy') list = A.filter(isBuy);
@@ -96,8 +90,7 @@ function render(){
     'OWNED: <b>' + A.filter(c=>c.s==='owned').length + '</b> &nbsp;·&nbsp; ' +
     'WANTED: <b>' + A.filter(isBuy).length + '</b> &nbsp;·&nbsp; ' +
     '&#9733; PRIORITY: <b>' + A.filter(c=>c.p).length + '</b> &nbsp;·&nbsp; ' +
-    'THIS COLLECTION: <b>' + A.length + '</b> &nbsp;·&nbsp; ' +
-    'GRAND TOTAL: <b>' + all().length + '</b>';
+    'TOTAL: <b>' + A.length + '</b>';
 
   if (!A.length){
     document.getElementById('out').innerHTML =
@@ -133,10 +126,6 @@ function render(){
   });
 }
 
-document.querySelectorAll('.colbar button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.colbar button').forEach(x => x.classList.remove('on'));
-  b.classList.add('on'); coll = +b.dataset.c; render();
-});
 document.querySelectorAll('.bar button[data-f]').forEach(b => b.onclick = () => {
   document.querySelectorAll('.bar button[data-f]').forEach(x => x.classList.remove('on'));
   b.classList.add('on'); filter = b.dataset.f; render();
@@ -164,7 +153,7 @@ async function addCard(){
     }catch(e){}
   }
   if (all().some(c => c.n.toLowerCase() === real.toLowerCase())) { msg('Already in the list: ' + real); inp.value=''; return; }
-  mine.push({n: real, i: img, s: 'mine', g: EXTRA, p: false, c: coll});
+  mine.push({n: real, i: img, s: 'mine', g: EXTRA, p: false, c: 1});
   save(); inp.value = '';
   msg(img ? 'Added: ' + real : 'Added (no image found): ' + real);
   render();
@@ -173,21 +162,22 @@ document.getElementById('addBtn').onclick = addCard;
 document.getElementById('newCard').addEventListener('keydown', e => { if (e.key === 'Enter') addCard(); });
 
 document.getElementById('exportBtn').onclick = () => {
-  const A = all(), NAMES = {1:'MAIN COLLECTION', 2:'CHARACTER TOKENS', 3:'HISTORIC & SPECIAL'};
+  const A = all();
   let t = 'YU-GI-OH COLLECTION   ([OWNED] / [WANTED], * = PRIORITY)\n';
-  for (const k of [1,2,3]){
-    const sub = A.filter(c => c.c === k);
-    if (!sub.length) continue;
-    t += '\n############ ' + NAMES[k] + ' (' + sub.length + ') ############\n';
-    const groups = {};
-    for (const c of sub){ (groups[c.g] = groups[c.g] || []).push(c); }
-    for (const g of GORDER.concat([EXTRA])){
-      if (!groups[g]) continue;
-      t += '\n== ' + g + ' ==\n';
-      for (const c of groups[g])
-        t += (c.s === 'owned' ? '[OWNED]  ' : '[WANTED] ') + c.n + (c.p ? ' *' : '')
-           + (c.k ? '   (' + c.k + ')' : '') + '\n';
-    }
+  t += 'OWNED: ' + A.filter(c => c.s === 'owned').length
+     + '   WANTED: ' + A.filter(isBuy).length
+     + '   PRIORITY: ' + A.filter(c => c.p).length
+     + '   TOTAL: ' + A.length + '\n';
+  const groups = {};
+  for (const c of A){ (groups[c.g] = groups[c.g] || []).push(c); }
+  for (const g of GORDER.concat([EXTRA])){
+    if (!groups[g]) continue;
+    const items = groups[g];
+    const own = items.filter(c => c.s === 'owned').length;
+    t += '\n== ' + g + '   (' + items.length + ' cards \u00b7 ' + own + ' owned) ==\n';
+    for (const c of items)
+      t += (c.s === 'owned' ? '[OWNED]  ' : '[WANTED] ') + c.n + (c.p ? ' *' : '')
+         + (c.k ? '   (' + c.k + ')' : '') + '\n';
   }
   const b = new Blob([t], {type:'text/plain;charset=utf-8'});
   const a = document.createElement('a');
